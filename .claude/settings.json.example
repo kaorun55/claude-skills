@@ -1,0 +1,6 @@
+{
+  "env": {
+    "ESA_TEAM_NAME": "your-team-name",
+    "ESA_ACCESS_TOKEN": "your-access-token"
+  }
+}

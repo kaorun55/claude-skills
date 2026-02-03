@@ -1,0 +1,5 @@
+# Claude Code settings (contains sensitive tokens)
+.claude/settings.json
+
+# macOS
+.DS_Store
