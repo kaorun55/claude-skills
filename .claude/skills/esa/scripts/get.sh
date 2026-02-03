@@ -4,16 +4,28 @@
 
 set -euo pipefail
 
-# 環境変数チェック
-if [[ -z "${ESA_ACCESS_TOKEN:-}" ]]; then
-    echo "エラー: ESA_ACCESS_TOKEN が設定されていません" >&2
-    echo "設定方法: export ESA_ACCESS_TOKEN='your-token'" >&2
+# スクリプトのディレクトリを取得
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${SCRIPT_DIR}/../config.json"
+
+# 設定ファイルから読み込み（環境変数が未設定の場合）
+if [[ -z "${ESA_ACCESS_TOKEN:-}" ]] || [[ -z "${ESA_TEAM_NAME:-}" ]]; then
+    if [[ -f "$CONFIG_FILE" ]]; then
+        ESA_TEAM_NAME="${ESA_TEAM_NAME:-$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['team_name'])" 2>/dev/null)}"
+        ESA_ACCESS_TOKEN="${ESA_ACCESS_TOKEN:-$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['access_token'])" 2>/dev/null)}"
+    fi
+fi
+
+# 設定チェック
+if [[ -z "${ESA_ACCESS_TOKEN:-}" ]] || [[ "$ESA_ACCESS_TOKEN" == "your-access-token" ]]; then
+    echo "エラー: アクセストークンが設定されていません" >&2
+    echo "設定方法: ${CONFIG_FILE} を編集してください" >&2
     exit 1
 fi
 
-if [[ -z "${ESA_TEAM_NAME:-}" ]]; then
-    echo "エラー: ESA_TEAM_NAME が設定されていません" >&2
-    echo "設定方法: export ESA_TEAM_NAME='your-team'" >&2
+if [[ -z "${ESA_TEAM_NAME:-}" ]] || [[ "$ESA_TEAM_NAME" == "your-team-name" ]]; then
+    echo "エラー: チーム名が設定されていません" >&2
+    echo "設定方法: ${CONFIG_FILE} を編集してください" >&2
     exit 1
 fi
 
@@ -43,7 +55,7 @@ RESPONSE=$(curl -s -f \
     exit 1
 }
 
-# レスポンス解析（jqがない場合はpython3を使用）
+# レスポンス解析
 if command -v jq &> /dev/null; then
     echo "# $(echo "$RESPONSE" | jq -r '.full_name')"
     echo ""
@@ -59,26 +71,24 @@ if command -v jq &> /dev/null; then
     echo ""
     echo "$RESPONSE" | jq -r '.body_md'
 else
-    python3 << PYTHON_SCRIPT
+    echo "$RESPONSE" | python3 -c "
 import json
-import os
+import sys
 
-response = '''$(echo "$RESPONSE" | sed "s/'''/\\\\'''/g")'''
-data = json.loads(response)
-
-team = os.environ.get('ESA_TEAM_NAME', '')
-print(f"# {data.get('full_name', 'タイトルなし')}")
+data = json.load(sys.stdin)
+team = '$ESA_TEAM_NAME'
+print(f\"# {data.get('full_name', 'タイトルなし')}\")
 print()
-print(f"- 記事番号: {data.get('number')}")
-print(f"- URL: https://{team}.esa.io/posts/{data.get('number')}")
-print(f"- カテゴリ: {data.get('category') or 'なし'}")
-print(f"- タグ: {', '.join(data.get('tags', []))}")
-print(f"- WIP: {data.get('wip')}")
-print(f"- 作成日: {data.get('created_at')}")
-print(f"- 更新日: {data.get('updated_at')}")
+print(f\"- 記事番号: {data.get('number')}\")
+print(f\"- URL: https://{team}.esa.io/posts/{data.get('number')}\")
+print(f\"- カテゴリ: {data.get('category') or 'なし'}\")
+print(f\"- タグ: {', '.join(data.get('tags', []))}\")
+print(f\"- WIP: {data.get('wip')}\")
+print(f\"- 作成日: {data.get('created_at')}\")
+print(f\"- 更新日: {data.get('updated_at')}\")
 print()
-print("---")
+print('---')
 print()
 print(data.get('body_md', ''))
-PYTHON_SCRIPT
+"
 fi

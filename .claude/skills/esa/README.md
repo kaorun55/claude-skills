@@ -19,20 +19,24 @@ esaの記事を検索・取得するClaude Codeスキルです。
 4. **Read** スコープのみを選択（セキュリティのため）
 5. トークンをコピー
 
-### 2. 環境変数の設定
+### 2. 設定ファイルの作成
 
-プロジェクトの `.claude/settings.json` に設定:
+スキルディレクトリ内の `config.json` を作成:
+
+```bash
+cp config.json.example config.json
+```
+
+編集して実際の値を入力:
 
 ```json
 {
-  "env": {
-    "ESA_TEAM_NAME": "your-team-name",
-    "ESA_ACCESS_TOKEN": "your-access-token"
-  }
+  "team_name": "your-team-name",
+  "access_token": "your-access-token"
 }
 ```
 
-> **重要**: `.claude/settings.json` を `.gitignore` に追加してください。
+> **重要**: `config.json` は `.gitignore` に含まれており、Gitにはコミットされません。
 
 ### 3. Claude Codeを再起動
 
@@ -73,17 +77,20 @@ esaの記事123を見せて
 
 ```
 .claude/skills/esa/
-├── SKILL.md        # スキル定義
-├── README.md       # このファイル
-├── SECURITY.md     # セキュリティ考慮事項
+├── SKILL.md            # スキル定義
+├── README.md           # このファイル
+├── SECURITY.md         # セキュリティ考慮事項
+├── config.json         # 設定ファイル（Git管理外）
+├── config.json.example # 設定ファイルのテンプレート
 └── scripts/
-    ├── search.sh   # 検索スクリプト
-    └── get.sh      # 取得スクリプト
+    ├── search.sh       # 検索スクリプト
+    └── get.sh          # 取得スクリプト
 ```
 
 ## セキュリティ
 
-- アクセストークンは環境変数で管理
+- アクセストークンはスキルディレクトリ内の `config.json` で管理
+- `config.json` は `.gitignore` でGit管理外
 - Bearer認証でAPIにアクセス（URLにトークンを含めない）
 - 読み取り専用APIのみ使用
 - 入力値のバリデーション実装

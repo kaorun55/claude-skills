@@ -4,16 +4,28 @@
 
 set -euo pipefail
 
-# 環境変数チェック
-if [[ -z "${ESA_ACCESS_TOKEN:-}" ]]; then
-    echo "エラー: ESA_ACCESS_TOKEN が設定されていません" >&2
-    echo "設定方法: export ESA_ACCESS_TOKEN='your-token'" >&2
+# スクリプトのディレクトリを取得
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${SCRIPT_DIR}/../config.json"
+
+# 設定ファイルから読み込み（環境変数が未設定の場合）
+if [[ -z "${ESA_ACCESS_TOKEN:-}" ]] || [[ -z "${ESA_TEAM_NAME:-}" ]]; then
+    if [[ -f "$CONFIG_FILE" ]]; then
+        ESA_TEAM_NAME="${ESA_TEAM_NAME:-$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['team_name'])" 2>/dev/null)}"
+        ESA_ACCESS_TOKEN="${ESA_ACCESS_TOKEN:-$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['access_token'])" 2>/dev/null)}"
+    fi
+fi
+
+# 設定チェック
+if [[ -z "${ESA_ACCESS_TOKEN:-}" ]] || [[ "$ESA_ACCESS_TOKEN" == "your-access-token" ]]; then
+    echo "エラー: アクセストークンが設定されていません" >&2
+    echo "設定方法: ${CONFIG_FILE} を編集してください" >&2
     exit 1
 fi
 
-if [[ -z "${ESA_TEAM_NAME:-}" ]]; then
-    echo "エラー: ESA_TEAM_NAME が設定されていません" >&2
-    echo "設定方法: export ESA_TEAM_NAME='your-team'" >&2
+if [[ -z "${ESA_TEAM_NAME:-}" ]] || [[ "$ESA_TEAM_NAME" == "your-team-name" ]]; then
+    echo "エラー: チーム名が設定されていません" >&2
+    echo "設定方法: ${CONFIG_FILE} を編集してください" >&2
     exit 1
 fi
 
@@ -47,33 +59,28 @@ RESPONSE=$(curl -s -f \
     exit 1
 }
 
-# レスポンス解析（jqがない場合はpython3を使用）
+# レスポンス解析
 if command -v jq &> /dev/null; then
     TOTAL=$(echo "$RESPONSE" | jq -r '.total_count // 0')
     echo "検索結果: ${TOTAL}件"
     echo "---"
-    echo "$RESPONSE" | jq -r '.posts[] | "[\(.number)] \(.full_name)\n  URL: https://\(env.ESA_TEAM_NAME).esa.io/posts/\(.number)\n  更新: \(.updated_at)\n  WIP: \(.wip)\n  タグ: \(.tags | join(", "))\n"'
+    echo "$RESPONSE" | ESA_TEAM_NAME="$ESA_TEAM_NAME" jq -r '.posts[] | "[\(.number)] \(.full_name)\n  URL: https://\(env.ESA_TEAM_NAME).esa.io/posts/\(.number)\n  更新: \(.updated_at)\n  WIP: \(.wip)\n  タグ: \(.tags | join(", "))\n"'
 else
-    python3 << 'PYTHON_SCRIPT'
+    echo "$RESPONSE" | python3 -c "
 import json
 import sys
-import os
 
-try:
-    data = json.loads('''RESPONSE_PLACEHOLDER'''.replace("'''", ""))
-except:
-    data = json.loads(sys.stdin.read())
-
-team = os.environ.get('ESA_TEAM_NAME', '')
-print(f"検索結果: {data.get('total_count', 0)}件")
-print("---")
+data = json.load(sys.stdin)
+team = '$ESA_TEAM_NAME'
+print(f\"検索結果: {data.get('total_count', 0)}件\")
+print('---')
 for post in data.get('posts', []):
-    tags = ", ".join(post.get('tags', []))
-    print(f"[{post['number']}] {post['full_name']}")
-    print(f"  URL: https://{team}.esa.io/posts/{post['number']}")
-    print(f"  更新: {post['updated_at']}")
-    print(f"  WIP: {post['wip']}")
-    print(f"  タグ: {tags}")
+    tags = ', '.join(post.get('tags', []))
+    print(f\"[{post['number']}] {post['full_name']}\")
+    print(f\"  URL: https://{team}.esa.io/posts/{post['number']}\")
+    print(f\"  更新: {post['updated_at']}\")
+    print(f\"  WIP: {post['wip']}\")
+    print(f\"  タグ: {tags}\")
     print()
-PYTHON_SCRIPT
+"
 fi

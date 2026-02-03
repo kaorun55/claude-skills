@@ -26,22 +26,21 @@ cp -r .claude/skills/esa ~/.claude/skills/
 2. Settings → Applications → Personal access tokens
 3. 「Generate new token」で **Read** スコープのみのトークンを作成
 
-### 2. 環境変数を設定
+### 2. 設定ファイルを作成
 
-`.claude/settings.json` を作成:
+スキルディレクトリ内で:
 
 ```bash
-cp .claude/settings.json.example .claude/settings.json
+cd .claude/skills/esa  # または ~/.claude/skills/esa
+cp config.json.example config.json
 ```
 
 編集して実際の値を入力:
 
 ```json
 {
-  "env": {
-    "ESA_TEAM_NAME": "your-team-name",
-    "ESA_ACCESS_TOKEN": "your-access-token"
-  }
+  "team_name": "your-team-name",
+  "access_token": "your-access-token"
 }
 ```
 
@@ -60,8 +59,8 @@ cp .claude/settings.json.example .claude/settings.json
 ## セキュリティ
 
 - 読み取り専用（記事の変更不可）
-- トークンは環境変数で管理（コードにハードコードしない）
-- `.claude/settings.json` は `.gitignore` に含まれています
+- トークンはスキルディレクトリ内の `config.json` で管理
+- `config.json` は `.gitignore` に含まれています
 
 ## ライセンス
 

@@ -1,5 +1,8 @@
 # Claude Code settings (contains sensitive tokens)
 .claude/settings.json
 
+# esa skill config (contains access token)
+.claude/skills/esa/config.json
+
 # macOS
 .DS_Store
