@@ -1,8 +1,6 @@
 ---
 name: esa
 description: esaから記事を検索・取得する。「esaで〇〇を検索」「esaの記事を見せて」などのリクエストに対応。
-argument-hint: "[検索クエリ または 記事番号]"
-allowed-tools: Bash(bash .claude/skills/esa/scripts/*.sh *)
 ---
 
 # esa スキル
